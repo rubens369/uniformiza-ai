@@ -1,1 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uniformiza AI</title>
 
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body{
+background:#0f172a;
+color:white;
+font-family:Arial, sans-serif;
+}
+
+.card{
+background:#1e293b;
+border-radius:20px;
+padding:20px;
+box-shadow:0 0 20px rgba(0,0,0,.3);
+}
+
+.preview{
+width:100%;
+height:250px;
+border:2px dashed #475569;
+border-radius:15px;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+background:#0f172a;
+}
+
+.preview img{
+width:100%;
+height:100%;
+object-fit:contain;
+}
+
+.btn{
+background:#2563eb;
+padding:12px;
+border-radius:12px;
+font-weight:bold;
+width:100%;
+transition:.3s;
+}
+
+.btn:hover{
+background:#1d4ed8;
+}
+</style>
+
+</head>
+<body>
+
+<div class="max-w-6xl mx-auto p-4">
+
+<div class="text-center mb-8">
+<h1 class="text-4xl font-bold">
+Uniformiza AI
+</h1>
+
+<p class="text-slate-300 mt-2">
+Padronização Inteligente de Fotos
+</p>
+</div>
+
+<div class="grid md:grid-cols-2 gap-6">
+
+<div class="card">
+
+<h2 class="text-xl font-bold mb-4">
+Foto da Pessoa
+</h2>
+
+<input
+type="file"
+accept="image/*"
+id="fotoPessoa"
+class="mb-4 w-full"
+/>
+
+<div class="preview">
+<img id="previewPessoa">
+</div>
+
+</div>
+
+<div class="card">
+
+<h2 class="text-xl font-bold mb-4">
+Foto da Camisa
+</h2>
+
+<input
+type="file"
+accept="image/*"
+id="fotoCamisa"
+class="mb-4 w-full"
+/>
+
+<div class="preview">
+<img id="previewCamisa">
+</div>
+
+</div>
+
+</div>
+
+<div class="card mt-6">
+
+<h2 class="text-xl font-bold mb-4">
+Resultado
+</h2>
+
+<div class="preview h-[400px]">
+<img id="resultado">
+</div>
+
+<button class="btn mt-4" onclick="gerar()">
+Gerar Uniformização
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+const fotoPessoa =
+document.getElementById("fotoPessoa");
+
+const fotoCamisa =
+document.getElementById("fotoCamisa");
+
+fotoPessoa.addEventListener("change", e=>{
+const file=e.target.files[0];
+if(!file) return;
+
+const reader=new FileReader();
+
+reader.onload=()=>{
+document.getElementById("previewPessoa").src=
+reader.result;
+};
+
+reader.readAsDataURL(file);
+});
+
+fotoCamisa.addEventListener("change", e=>{
+const file=e.target.files[0];
+if(!file) return;
+
+const reader=new FileReader();
+
+reader.onload=()=>{
+document.getElementById("previewCamisa").src=
+reader.result;
+};
+
+reader.readAsDataURL(file);
+});
+
+function gerar(){
+
+if(
+!fotoPessoa.files.length ||
+!fotoCamisa.files.length
+){
+alert("Envie as duas imagens.");
+return;
+}
+
+alert(
+"Versão 1.0 pronta.\n\nNa próxima etapa vamos integrar IA real para vestir automaticamente a camisa."
+);
+
+document.getElementById("resultado").src =
+document.getElementById("previewPessoa").src;
+
+}
+
+</script>
+
+</body>
+</html>
