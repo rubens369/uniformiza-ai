@@ -8,41 +8,38 @@
 </head>
 
 <body class="bg-slate-950 text-white min-h-screen p-4">
-
 <div class="max-w-5xl mx-auto">
 
-  <h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
-  <p class="text-slate-300 mb-6">Teste real com CatVTON</p>
+<h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
+<p class="text-slate-300 mb-6">Teste automático de endpoints CatVTON</p>
 
-  <div class="grid md:grid-cols-2 gap-4">
-
-    <div class="bg-slate-900 p-4 rounded-2xl">
-      <h2 class="font-bold mb-3">Foto da Pessoa</h2>
-      <input id="person" type="file" accept="image/*" class="mb-3">
-      <img id="personPreview" class="w-full rounded-xl bg-slate-800">
-    </div>
-
-    <div class="bg-slate-900 p-4 rounded-2xl">
-      <h2 class="font-bold mb-3">Foto da Camisa</h2>
-      <input id="cloth" type="file" accept="image/*" class="mb-3">
-      <img id="clothPreview" class="w-full rounded-xl bg-slate-800">
-    </div>
-
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-slate-900 p-4 rounded-2xl">
+    <h2 class="font-bold mb-3">Foto da Pessoa</h2>
+    <input id="person" type="file" accept="image/*" class="mb-3">
+    <img id="personPreview" class="w-full rounded-xl bg-slate-800">
   </div>
 
-  <button onclick="gerar()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold text-lg">
-    GERAR UNIFORMIZAÇÃO
-  </button>
-
-  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
-    <h2 class="font-bold mb-3">Status</h2>
-    <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
+  <div class="bg-slate-900 p-4 rounded-2xl">
+    <h2 class="font-bold mb-3">Foto da Camisa</h2>
+    <input id="cloth" type="file" accept="image/*" class="mb-3">
+    <img id="clothPreview" class="w-full rounded-xl bg-slate-800">
   </div>
+</div>
 
-  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
-    <h2 class="font-bold mb-3">Resultado</h2>
-    <img id="resultado" class="w-full rounded-xl bg-slate-800">
-  </div>
+<button onclick="gerar()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold text-lg">
+GERAR UNIFORMIZAÇÃO
+</button>
+
+<div class="bg-slate-900 p-4 rounded-2xl mt-6">
+  <h2 class="font-bold mb-3">Status</h2>
+  <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
+</div>
+
+<div class="bg-slate-900 p-4 rounded-2xl mt-6">
+  <h2 class="font-bold mb-3">Resultado</h2>
+  <img id="resultado" class="w-full rounded-xl bg-slate-800">
+</div>
 
 </div>
 
@@ -62,6 +59,10 @@ function status(msg) {
   statusBox.textContent = msg;
 }
 
+function addStatus(msg) {
+  statusBox.textContent += "\n" + msg;
+}
+
 function preview(input, img) {
   input.addEventListener("change", () => {
     const file = input.files[0];
@@ -75,20 +76,32 @@ preview(clothInput, clothPreview);
 
 async function withTimeout(promise, ms, message) {
   let timer;
-
   const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(message));
-    }, ms);
+    timer = setTimeout(() => reject(new Error(message)), ms);
   });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
-  return Promise.race([promise, timeout]).finally(() => {
-    clearTimeout(timer);
-  });
+function extrairUrl(result) {
+  const output = result?.data?.[0];
+
+  if (!output) return null;
+
+  if (output.url) return output.url;
+  if (output.path) return output.path;
+  if (typeof output === "string") return output;
+
+  if (Array.isArray(output)) {
+    for (const item of output) {
+      if (item?.url) return item.url;
+      if (item?.path) return item.path;
+    }
+  }
+
+  return null;
 }
 
 window.gerar = async function () {
-
   const pessoaFile = personInput.files[0];
   const camisaFile = clothInput.files[0];
 
@@ -100,7 +113,6 @@ window.gerar = async function () {
   resultado.removeAttribute("src");
 
   try {
-
     status("Conectando ao CatVTON...");
 
     const app = await withTimeout(
@@ -109,74 +121,84 @@ window.gerar = async function () {
       "Tempo esgotado ao conectar ao Space."
     );
 
-    status(
-      "Conectado. Enviando imagens para a IA...\\n\\n" +
-      "Isso pode demorar alguns minutos se o servidor gratuito estiver em fila."
-    );
+    status("Conectado. Testando endpoints disponíveis...");
 
-    const result = await withTimeout(
-      app.predict("/submit_function", [
-        {
-          background: pessoaFile,
-          layers: [],
-          composite: null
-        },
-        camisaFile,
-        "upper",
-        30,
-        2.5,
-        -1,
-        "result only"
-      ]),
-      300000,
-      "Tempo esgotado. A geração passou de 5 minutos."
-    );
+    const pessoaEditor = {
+      background: pessoaFile,
+      layers: [],
+      composite: null
+    };
 
-    console.log("RESULTADO:", result);
+    const tentativas = [
+      {
+        nome: "/submit_function",
+        args: [pessoaEditor, camisaFile, "upper", 25, 2.5, -1, "result only"]
+      },
+      {
+        nome: "submit_function",
+        args: [pessoaEditor, camisaFile, "upper", 25, 2.5, -1, "result only"]
+      },
+      {
+        nome: "/submit_function_flux",
+        args: [pessoaEditor, camisaFile, "upper", 25, 30, -1, "result only"]
+      },
+      {
+        nome: "submit_function_flux",
+        args: [pessoaEditor, camisaFile, "upper", 25, 30, -1, "result only"]
+      },
+      {
+        nome: "/submit_function_p2p",
+        args: [pessoaEditor, camisaFile, 25, 2.5, -1]
+      },
+      {
+        nome: "submit_function_p2p",
+        args: [pessoaEditor, camisaFile, 25, 2.5, -1]
+      }
+    ];
 
-    status("Resposta recebida. Processando resultado...");
+    let ultimoErro = null;
 
-    const output = result.data?.[0];
+    for (const tentativa of tentativas) {
+      try {
+        addStatus("\nTentando endpoint: " + tentativa.nome);
 
-    if (output?.url) {
-      resultado.src = output.url;
-      status("Imagem gerada com sucesso!");
-      return;
+        const result = await withTimeout(
+          app.predict(tentativa.nome, tentativa.args),
+          300000,
+          "Tempo esgotado neste endpoint."
+        );
+
+        console.log("RESULTADO:", tentativa.nome, result);
+
+        const url = extrairUrl(result);
+
+        if (url) {
+          resultado.src = url;
+          addStatus("\nImagem gerada com sucesso usando: " + tentativa.nome);
+          return;
+        }
+
+        addStatus("Resposta recebida, mas sem URL de imagem.");
+        ultimoErro = new Error("Resposta sem URL.");
+
+      } catch (erro) {
+        console.error("ERRO NO ENDPOINT:", tentativa.nome, erro);
+        addStatus("Falhou: " + erro.message);
+        ultimoErro = erro;
+      }
     }
 
-    if (typeof output === "string") {
-      resultado.src = output;
-      status("Imagem gerada com sucesso!");
-      return;
-    }
-
-    if (output?.path) {
-      resultado.src = output.path;
-      status("Imagem gerada com sucesso!");
-      return;
-    }
-
-    status(
-      "A IA respondeu, mas o formato do resultado foi diferente.\\n" +
-      "Abra o console do navegador para ver os detalhes."
-    );
+    throw ultimoErro || new Error("Nenhum endpoint funcionou.");
 
   } catch (erro) {
-
     console.error(erro);
-
     status(
-      "Erro ao gerar a imagem.\\n\\n" +
-      erro.message + "\\n\\n" +
-      "Possíveis causas:\\n" +
-      "- servidor gratuito em fila;\\n" +
-      "- Space temporariamente fora do ar;\\n" +
-      "- imagem muito grande;\\n" +
-      "- endpoint mudou."
+      "Erro final ao gerar imagem.\n\n" +
+      erro.message +
+      "\n\nVeja o Console para detalhes."
     );
   }
 };
 </script>
-
 </body>
 </html>
