@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Uniformiza AI - Teste Worker</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://tailwindcss.com"></script>
 </head>
 
 <body class="bg-slate-950 text-white min-h-screen p-4">
@@ -44,7 +44,8 @@ GERAR UNIFORMIZAÇÃO
 </div>
 
 <script>
-const WORKER_URL = "https://uniformiza-ai-kolors.prmoizinho.workers.dev";
+// URL do seu Cloudflare Worker
+const WORKER_URL = "https://workers.dev";
 
 const pessoaInput = document.getElementById("pessoa");
 const camisaInput = document.getElementById("camisa");
@@ -80,12 +81,14 @@ async function gerar() {
   resultado.removeAttribute("src");
   status("Enviando imagens para o servidor seguro...\nAguarde, pode demorar alguns minutos.");
 
+  // Monta os dados binários do formulário
   const form = new FormData();
   form.append("pessoa", pessoa);
   form.append("camisa", camisa);
 
   try {
-  const res = await fetch(`${SPACE_URL}/upload`, {
+    // CORREÇÃO: Mudado de SPACE_URL para WORKER_URL e rota para o Worker
+    const res = await fetch(`${WORKER_URL}/upload`, {
       method: "POST",
       body: form
     });
@@ -93,10 +96,11 @@ async function gerar() {
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data.erro || "Erro desconhecido.");
+      throw new Error(data.erro || data.error || "Erro desconhecido no servidor.");
     }
 
-    resultado.src = data.imageUrl;
+    // Define o resultado baseado na resposta do seu Worker
+    resultado.src = data.imageUrl || data.result || data.image;
     status("Imagem gerada com sucesso!");
 
   } catch (e) {
