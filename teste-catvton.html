@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teste CatVTON - Uniformiza AI</title>
+<title>Uniformiza AI - Teste Worker</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -11,19 +11,19 @@
 <div class="max-w-5xl mx-auto">
 
 <h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
-<p class="text-slate-300 mb-6">Teste automático de endpoints CatVTON</p>
+<p class="text-slate-300 mb-6">Teste via Cloudflare Worker + Hugging Face</p>
 
 <div class="grid md:grid-cols-2 gap-4">
   <div class="bg-slate-900 p-4 rounded-2xl">
     <h2 class="font-bold mb-3">Foto da Pessoa</h2>
-    <input id="person" type="file" accept="image/*" class="mb-3">
-    <img id="personPreview" class="w-full rounded-xl bg-slate-800">
+    <input id="pessoa" type="file" accept="image/*" class="mb-3">
+    <img id="previewPessoa" class="w-full rounded-xl bg-slate-800">
   </div>
 
   <div class="bg-slate-900 p-4 rounded-2xl">
     <h2 class="font-bold mb-3">Foto da Camisa</h2>
-    <input id="cloth" type="file" accept="image/*" class="mb-3">
-    <img id="clothPreview" class="w-full rounded-xl bg-slate-800">
+    <input id="camisa" type="file" accept="image/*" class="mb-3">
+    <img id="previewCamisa" class="w-full rounded-xl bg-slate-800">
   </div>
 </div>
 
@@ -43,24 +43,18 @@ GERAR UNIFORMIZAÇÃO
 
 </div>
 
-<script type="module">
-import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/+esm";
+<script>
+const WORKER_URL = "https://uniformiza-ai-api.prmoizinho.workers.dev";
 
-const SPACE = "zhengchong/CatVTON";
-
-const personInput = document.getElementById("person");
-const clothInput = document.getElementById("cloth");
-const personPreview = document.getElementById("personPreview");
-const clothPreview = document.getElementById("clothPreview");
+const pessoaInput = document.getElementById("pessoa");
+const camisaInput = document.getElementById("camisa");
+const previewPessoa = document.getElementById("previewPessoa");
+const previewCamisa = document.getElementById("previewCamisa");
 const resultado = document.getElementById("resultado");
 const statusBox = document.getElementById("status");
 
 function status(msg) {
   statusBox.textContent = msg;
-}
-
-function addStatus(msg) {
-  statusBox.textContent += "\n" + msg;
 }
 
 function preview(input, img) {
@@ -71,123 +65,45 @@ function preview(input, img) {
   });
 }
 
-preview(personInput, personPreview);
-preview(clothInput, clothPreview);
+preview(pessoaInput, previewPessoa);
+preview(camisaInput, previewCamisa);
 
-async function withTimeout(promise, ms, message) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
+async function gerar() {
+  const pessoa = pessoaInput.files[0];
+  const camisa = camisaInput.files[0];
 
-function extrairUrl(result) {
-  const output = result?.data?.[0];
-
-  if (!output) return null;
-
-  if (output.url) return output.url;
-  if (output.path) return output.path;
-  if (typeof output === "string") return output;
-
-  if (Array.isArray(output)) {
-    for (const item of output) {
-      if (item?.url) return item.url;
-      if (item?.path) return item.path;
-    }
-  }
-
-  return null;
-}
-
-window.gerar = async function () {
-  const pessoaFile = personInput.files[0];
-  const camisaFile = clothInput.files[0];
-
-  if (!pessoaFile || !camisaFile) {
+  if (!pessoa || !camisa) {
     alert("Envie a foto da pessoa e a foto da camisa.");
     return;
   }
 
   resultado.removeAttribute("src");
+  status("Enviando imagens para o servidor seguro...\nAguarde, pode demorar alguns minutos.");
+
+  const form = new FormData();
+  form.append("pessoa", pessoa);
+  form.append("camisa", camisa);
 
   try {
-    status("Conectando ao CatVTON...");
+    const res = await fetch(WORKER_URL, {
+      method: "POST",
+      body: form
+    });
 
-    const app = await withTimeout(
-      Client.connect(SPACE),
-      60000,
-      "Tempo esgotado ao conectar ao Space."
-    );
+    const data = await res.json();
 
-    status("Convertendo foto da pessoa para o formato correto...");
-
-    const pessoaConvertida = await withTimeout(
-      app.predict("/person_example_fn", [pessoaFile]),
-      120000,
-      "Tempo esgotado ao converter a foto da pessoa."
-    );
-
-    console.log("PESSOA CONVERTIDA:", pessoaConvertida);
-
-    const pessoaEditor = pessoaConvertida.data?.[0];
-
-    if (!pessoaEditor) {
-      throw new Error("Não foi possível converter a foto da pessoa.");
+    if (!res.ok) {
+      throw new Error(data.erro || "Erro desconhecido.");
     }
 
-    status(
-      "Foto convertida. Enviando para a IA vestir a camisa...\n\n" +
-      "Pode demorar alguns minutos no servidor gratuito."
-    );
+    resultado.src = data.imageUrl;
+    status("Imagem gerada com sucesso!");
 
-    const result = await withTimeout(
-      app.predict("/submit_function", [
-        pessoaEditor,
-        camisaFile,
-        "upper",
-        25,
-        2.5,
-        -1,
-        "result only"
-      ]),
-      300000,
-      "Tempo esgotado. A geração passou de 5 minutos."
-    );
-
-    console.log("RESULTADO:", result);
-
-    const url = extrairUrl(result);
-
-    if (url) {
-      resultado.src = url;
-      status("Imagem gerada com sucesso!");
-      return;
-    }
-
-    status("A IA respondeu, mas não encontrei a URL da imagem. Veja o Console.");
-
-  } catch (erro) {
-    console.error(erro);
-    status(
-      "Erro ao gerar a imagem.\n\n" +
-      erro.message +
-      "\n\nVeja o Console para detalhes."
-    );
+  } catch (e) {
+    console.error(e);
+    status("Erro ao gerar imagem:\n\n" + e.message);
   }
-};
-    throw ultimoErro || new Error("Nenhum endpoint funcionou.");
-
-  } catch (erro) {
-    console.error(erro);
-    status(
-      "Erro final ao gerar imagem.\n\n" +
-      erro.message +
-      "\n\nVeja o Console para detalhes."
-    );
-  }
-};
+}
 </script>
 </body>
 </html>
