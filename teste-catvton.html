@@ -84,25 +84,35 @@ async function gerar() {
   form.append("pessoa", pessoa);
   form.append("camisa", camisa);
 
-  try {
-    const res = await fetch(`${SPACE_URL}/upload`, {
-      method: "POST",
-      body: form
-    });
+try {
+  const res = await fetch(WORKER_URL, {
+    method: "POST",
+    body: form
+  });
 
-    const data = await res.json();
+  const contentType = res.headers.get("content-type") || "";
+  const data = contentType.includes("application/json")
+    ? await res.json()
+    : { error: await res.text() };
 
-    if (!res.ok) {
-      throw new Error(data.erro || data.error || "Erro desconhecido.");
-    }
-
-    resultado.src = data.imageUrl || data.result || data.image;
-    status("Imagem gerada com sucesso!");
-
-  } catch (e) {
-    console.error(e);
-    status("Erro ao gerar imagem:\n\n" + e.message);
+  if (!res.ok) {
+    throw new Error(data.erro || data.error || data.detail || "Erro desconhecido.");
   }
+
+  const imageUrl = data.imageUrl || data.result || data.image || data.url;
+
+  if (!imageUrl) {
+    throw new Error("O servidor respondeu, mas não enviou a URL da imagem.");
+  }
+
+  resultado.src = imageUrl;
+  status("Imagem gerada com sucesso!");
+
+} catch (e) {
+  console.error(e);
+  status("Erro ao gerar imagem:\n\n" + e.message);
+}
+
 }
 </script>
 </body>
