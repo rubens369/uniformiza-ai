@@ -3,21 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teste CatVTON - Debug</title>
+<title>Teste CatVTON - Uniformiza AI</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-950 text-white min-h-screen p-4">
-<div class="max-w-4xl mx-auto">
-  <h1 class="text-3xl font-bold">Uniformiza AI</h1>
-  <p class="text-slate-300 mb-4">Teste CatVTON com diagnóstico</p>
 
-  <div class="bg-slate-900 p-4 rounded-2xl mb-4">
-    <button onclick="testarApi()" class="w-full bg-emerald-600 py-3 rounded-xl font-bold">
-      1. TESTAR API DO SPACE
-    </button>
-  </div>
+<body class="bg-slate-950 text-white min-h-screen p-4">
+
+<div class="max-w-5xl mx-auto">
+
+  <h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
+  <p class="text-slate-300 mb-6">Teste real com CatVTON</p>
 
   <div class="grid md:grid-cols-2 gap-4">
+
     <div class="bg-slate-900 p-4 rounded-2xl">
       <h2 class="font-bold mb-3">Foto da Pessoa</h2>
       <input id="person" type="file" accept="image/*" class="mb-3">
@@ -29,21 +27,23 @@
       <input id="cloth" type="file" accept="image/*" class="mb-3">
       <img id="clothPreview" class="w-full rounded-xl bg-slate-800">
     </div>
+
   </div>
 
-  <button onclick="gerar()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold">
-    2. GERAR COM CATVTON
+  <button onclick="gerar()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold text-lg">
+    GERAR UNIFORMIZAÇÃO
   </button>
 
   <div class="bg-slate-900 p-4 rounded-2xl mt-6">
     <h2 class="font-bold mb-3">Status</h2>
-    <pre id="log" class="text-xs whitespace-pre-wrap text-yellow-300"></pre>
+    <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
   </div>
 
   <div class="bg-slate-900 p-4 rounded-2xl mt-6">
     <h2 class="font-bold mb-3">Resultado</h2>
     <img id="resultado" class="w-full rounded-xl bg-slate-800">
   </div>
+
 </div>
 
 <script type="module">
@@ -56,14 +56,10 @@ const clothInput = document.getElementById("cloth");
 const personPreview = document.getElementById("personPreview");
 const clothPreview = document.getElementById("clothPreview");
 const resultado = document.getElementById("resultado");
-const logBox = document.getElementById("log");
+const statusBox = document.getElementById("status");
 
-function log(msg) {
-  logBox.textContent += "\\n" + msg;
-}
-
-function limparLog() {
-  logBox.textContent = "";
+function status(msg) {
+  statusBox.textContent = msg;
 }
 
 function preview(input, img) {
@@ -79,49 +75,24 @@ preview(clothInput, clothPreview);
 
 async function withTimeout(promise, ms, message) {
   let timer;
+
   const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms);
+    timer = setTimeout(() => {
+      reject(new Error(message));
+    }, ms);
   });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+
+  return Promise.race([promise, timeout]).finally(() => {
+    clearTimeout(timer);
+  });
 }
 
-window.testarApi = async function () {
-  limparLog();
-  log("Conectando ao Space: " + SPACE);
-
-  try {
-    const app = await withTimeout(
-      Client.connect(SPACE),
-      60000,
-      "Tempo esgotado ao conectar ao Space."
-    );
-
-    log("Conectado.");
-    log("Tentando obter informações da API...");
-
-    console.log(app);
-    log("Objeto app foi enviado para o console do navegador.");
-
-    if (app.view_api) {
-      const info = await app.view_api();
-      console.log("API INFO:", info);
-      log(JSON.stringify(info, null, 2));
-    } else {
-      log("Este client não expôs view_api(). Vamos testar endpoint padrão.");
-    }
-  } catch (e) {
-    console.error(e);
-    log("ERRO: " + e.message);
-  }
-};
-
 window.gerar = async function () {
-  limparLog();
 
-  const pessoa = personInput.files[0];
-  const camisa = clothInput.files[0];
+  const pessoaFile = personInput.files[0];
+  const camisaFile = clothInput.files[0];
 
-  if (!pessoa || !camisa) {
+  if (!pessoaFile || !camisaFile) {
     alert("Envie a foto da pessoa e a foto da camisa.");
     return;
   }
@@ -129,51 +100,83 @@ window.gerar = async function () {
   resultado.removeAttribute("src");
 
   try {
-    log("Conectando ao Space...");
+
+    status("Conectando ao CatVTON...");
+
     const app = await withTimeout(
       Client.connect(SPACE),
       60000,
       "Tempo esgotado ao conectar ao Space."
     );
 
-    log("Conectado. Enviando imagens...");
-    log("Se demorar muito, o Space pode estar em fila ou dormindo.");
+    status(
+      "Conectado. Enviando imagens para a IA...\\n\\n" +
+      "Isso pode demorar alguns minutos se o servidor gratuito estiver em fila."
+    );
 
     const result = await withTimeout(
-      app.predict("/tryon", [
-        pessoa,
-        camisa,
-        null,
+      app.predict("/submit_function", [
+        {
+          background: pessoaFile,
+          layers: [],
+          composite: null
+        },
+        camisaFile,
         "upper",
         30,
         2.5,
-        -1
+        -1,
+        "result only"
       ]),
       300000,
       "Tempo esgotado. A geração passou de 5 minutos."
     );
 
     console.log("RESULTADO:", result);
-    log("Resposta recebida:");
-    log(JSON.stringify(result, null, 2).slice(0, 2000));
+
+    status("Resposta recebida. Processando resultado...");
 
     const output = result.data?.[0];
 
     if (output?.url) {
       resultado.src = output.url;
-      log("Imagem carregada com sucesso.");
-    } else if (typeof output === "string") {
-      resultado.src = output;
-      log("Imagem carregada com sucesso.");
-    } else {
-      log("Não encontrei URL da imagem em data[0]. Veja o console.");
+      status("Imagem gerada com sucesso!");
+      return;
     }
 
-  } catch (e) {
-    console.error(e);
-    log("ERRO: " + e.message);
+    if (typeof output === "string") {
+      resultado.src = output;
+      status("Imagem gerada com sucesso!");
+      return;
+    }
+
+    if (output?.path) {
+      resultado.src = output.path;
+      status("Imagem gerada com sucesso!");
+      return;
+    }
+
+    status(
+      "A IA respondeu, mas o formato do resultado foi diferente.\\n" +
+      "Abra o console do navegador para ver os detalhes."
+    );
+
+  } catch (erro) {
+
+    console.error(erro);
+
+    status(
+      "Erro ao gerar a imagem.\\n\\n" +
+      erro.message + "\\n\\n" +
+      "Possíveis causas:\\n" +
+      "- servidor gratuito em fila;\\n" +
+      "- Space temporariamente fora do ar;\\n" +
+      "- imagem muito grande;\\n" +
+      "- endpoint mudou."
+    );
   }
 };
 </script>
+
 </body>
 </html>
