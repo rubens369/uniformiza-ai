@@ -121,73 +121,62 @@ window.gerar = async function () {
       "Tempo esgotado ao conectar ao Space."
     );
 
-    status("Conectado. Testando endpoints disponíveis...");
+    status("Convertendo foto da pessoa para o formato correto...");
 
-    const pessoaEditor = {
-      background: pessoaFile,
-      layers: [],
-      composite: null
-    };
+    const pessoaConvertida = await withTimeout(
+      app.predict("/person_example_fn", [pessoaFile]),
+      120000,
+      "Tempo esgotado ao converter a foto da pessoa."
+    );
 
-    const tentativas = [
-      {
-        nome: "/submit_function",
-        args: [pessoaEditor, camisaFile, "upper", 25, 2.5, -1, "result only"]
-      },
-      {
-        nome: "submit_function",
-        args: [pessoaEditor, camisaFile, "upper", 25, 2.5, -1, "result only"]
-      },
-      {
-        nome: "/submit_function_flux",
-        args: [pessoaEditor, camisaFile, "upper", 25, 30, -1, "result only"]
-      },
-      {
-        nome: "submit_function_flux",
-        args: [pessoaEditor, camisaFile, "upper", 25, 30, -1, "result only"]
-      },
-      {
-        nome: "/submit_function_p2p",
-        args: [pessoaEditor, camisaFile, 25, 2.5, -1]
-      },
-      {
-        nome: "submit_function_p2p",
-        args: [pessoaEditor, camisaFile, 25, 2.5, -1]
-      }
-    ];
+    console.log("PESSOA CONVERTIDA:", pessoaConvertida);
 
-    let ultimoErro = null;
+    const pessoaEditor = pessoaConvertida.data?.[0];
 
-    for (const tentativa of tentativas) {
-      try {
-        addStatus("\nTentando endpoint: " + tentativa.nome);
-
-        const result = await withTimeout(
-          app.predict(tentativa.nome, tentativa.args),
-          300000,
-          "Tempo esgotado neste endpoint."
-        );
-
-        console.log("RESULTADO:", tentativa.nome, result);
-
-        const url = extrairUrl(result);
-
-        if (url) {
-          resultado.src = url;
-          addStatus("\nImagem gerada com sucesso usando: " + tentativa.nome);
-          return;
-        }
-
-        addStatus("Resposta recebida, mas sem URL de imagem.");
-        ultimoErro = new Error("Resposta sem URL.");
-
-      } catch (erro) {
-        console.error("ERRO NO ENDPOINT:", tentativa.nome, erro);
-        addStatus("Falhou: " + erro.message);
-        ultimoErro = erro;
-      }
+    if (!pessoaEditor) {
+      throw new Error("Não foi possível converter a foto da pessoa.");
     }
 
+    status(
+      "Foto convertida. Enviando para a IA vestir a camisa...\n\n" +
+      "Pode demorar alguns minutos no servidor gratuito."
+    );
+
+    const result = await withTimeout(
+      app.predict("/submit_function", [
+        pessoaEditor,
+        camisaFile,
+        "upper",
+        25,
+        2.5,
+        -1,
+        "result only"
+      ]),
+      300000,
+      "Tempo esgotado. A geração passou de 5 minutos."
+    );
+
+    console.log("RESULTADO:", result);
+
+    const url = extrairUrl(result);
+
+    if (url) {
+      resultado.src = url;
+      status("Imagem gerada com sucesso!");
+      return;
+    }
+
+    status("A IA respondeu, mas não encontrei a URL da imagem. Veja o Console.");
+
+  } catch (erro) {
+    console.error(erro);
+    status(
+      "Erro ao gerar a imagem.\n\n" +
+      erro.message +
+      "\n\nVeja o Console para detalhes."
+    );
+  }
+};
     throw ultimoErro || new Error("Nenhum endpoint funcionou.");
 
   } catch (erro) {
