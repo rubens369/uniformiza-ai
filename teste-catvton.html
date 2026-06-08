@@ -1,1 +1,112 @@
-<h1>Teste CatVTON</h1>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teste CatVTON - Uniformiza AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-950 text-white min-h-screen p-4">
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
+  <p class="text-slate-300 mb-6">Teste de IA com CatVTON</p>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="bg-slate-900 p-4 rounded-2xl">
+      <h2 class="font-bold mb-3">Foto da Pessoa</h2>
+      <input id="person" type="file" accept="image/*" class="mb-3">
+      <img id="personPreview" class="w-full rounded-xl bg-slate-800">
+    </div>
+
+    <div class="bg-slate-900 p-4 rounded-2xl">
+      <h2 class="font-bold mb-3">Foto da Camisa</h2>
+      <input id="cloth" type="file" accept="image/*" class="mb-3">
+      <img id="clothPreview" class="w-full rounded-xl bg-slate-800">
+    </div>
+  </div>
+
+  <button onclick="gerar()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold">
+    GERAR COM CATVTON
+  </button>
+
+  <div id="status" class="mt-4 text-yellow-300"></div>
+
+  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
+    <h2 class="font-bold mb-3">Resultado</h2>
+    <img id="resultado" class="w-full rounded-xl bg-slate-800">
+  </div>
+</div>
+
+<script type="module">
+import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/+esm";
+
+const SPACE = "zhengchong/CatVTON";
+
+const personInput = document.getElementById("person");
+const clothInput = document.getElementById("cloth");
+const personPreview = document.getElementById("personPreview");
+const clothPreview = document.getElementById("clothPreview");
+const resultado = document.getElementById("resultado");
+const status = document.getElementById("status");
+
+function preview(input, img) {
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (!file) return;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+preview(personInput, personPreview);
+preview(clothInput, clothPreview);
+
+window.gerar = async function () {
+  const pessoa = personInput.files[0];
+  const camisa = clothInput.files[0];
+
+  if (!pessoa || !camisa) {
+    alert("Envie a foto da pessoa e a foto da camisa.");
+    return;
+  }
+
+  status.innerText = "Conectando ao CatVTON...";
+  resultado.removeAttribute("src");
+
+  try {
+    const app = await Client.connect(SPACE);
+
+    status.innerText = "Enviando imagens para IA. Aguarde...";
+
+    const result = await app.predict("/tryon", [
+      pessoa,
+      camisa,
+      null,
+      "upper",
+      30,
+      2.5,
+      -1
+    ]);
+
+    console.log(result);
+
+    const output = result.data?.[0];
+
+    if (output?.url) {
+      resultado.src = output.url;
+    } else if (typeof output === "string") {
+      resultado.src = output;
+    } else {
+      status.innerText = "A IA respondeu, mas o formato do resultado foi diferente. Veja o console.";
+      return;
+    }
+
+    status.innerText = "Imagem gerada com sucesso!";
+  } catch (erro) {
+    console.error(erro);
+    status.innerText = "Erro ao gerar. O Space pode estar fora do ar, em fila ou com endpoint diferente.";
+  }
+};
+</script>
+</body>
+</html>
