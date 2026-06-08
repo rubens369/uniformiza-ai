@@ -85,7 +85,7 @@ async function gerar() {
   form.append("camisa", camisa);
 
   try {
-    const res = await fetch(WORKER_URL, {
+    const res = await fetch(`${SPACE_URL}/upload`, {
       method: "POST",
       body: form
     });
