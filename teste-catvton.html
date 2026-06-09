@@ -1,184 +1,121 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Uniformiza AI - Teste Kolors</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uniformiza AI - Teste CatVTON</title>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-slate-950 text-white min-h-screen p-4">
-  <div class="max-w-5xl mx-auto">
+<div class="max-w-5xl mx-auto">
 
-    <h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
-    <p class="text-slate-300 mb-6">
-      Teste via Cloudflare Worker + Hugging Face (Kolors)
-    </p>
+<h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
+<p class="text-slate-300 mb-6">Teste via Cloudflare Worker + CatVTON</p>
 
-    <div class="grid md:grid-cols-2 gap-4">
-      <div class="bg-slate-900 p-4 rounded-2xl">
-        <h2 class="font-bold mb-3">Foto da Pessoa</h2>
-        <input id="pessoa" type="file" accept="image/*" class="mb-3 block w-full text-sm text-slate-300">
-        <img id="previewPessoa" class="w-full rounded-xl bg-slate-800 min-h-[250px] object-contain" />
-      </div>
-
-      <div class="bg-slate-900 p-4 rounded-2xl">
-        <h2 class="font-bold mb-3">Foto da Camisa</h2>
-        <input id="camisa" type="file" accept="image/*" class="mb-3 block w-full text-sm text-slate-300">
-        <img id="previewCamisa" class="w-full rounded-xl bg-slate-800 min-h-[250px] object-contain" />
-      </div>
-    </div>
-
-    <button
-      id="btnGerar"
-      onclick="gerar()"
-      class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold text-lg transition"
-    >
-      GERAR UNIFORMIZAÇÃO
-    </button>
-
-    <div class="bg-slate-900 p-4 rounded-2xl mt-6">
-      <h2 class="font-bold mb-3">Status</h2>
-      <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
-    </div>
-
-    <div class="bg-slate-900 p-4 rounded-2xl mt-6">
-      <h2 class="font-bold mb-3">Resultado</h2>
-      <img id="resultado" class="w-full rounded-xl bg-slate-800 min-h-[300px] object-contain" />
-      
-      <a
-        id="btnDownload"
-        href="#"
-        download="uniformiza-ai-resultado.png"
-        class="hidden mt-4 inline-block bg-emerald-600 hover:bg-emerald-700 px-4 py-3 rounded-xl font-bold transition"
-      >
-        Baixar imagem
-      </a>
-    </div>
-
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-slate-900 p-4 rounded-2xl">
+    <h2 class="font-bold mb-3">Foto da Pessoa</h2>
+    <input id="pessoa" type="file" accept="image/*" class="mb-3">
+    <img id="previewPessoa" class="w-full rounded-xl bg-slate-800">
   </div>
 
-  <script>
-    const WORKER_URL = "https://uniformiza-ai-kolors.prmoizinho.workers.dev";
+  <div class="bg-slate-900 p-4 rounded-2xl">
+    <h2 class="font-bold mb-3">Foto da Camisa</h2>
+    <input id="camisa" type="file" accept="image/*" class="mb-3">
+    <img id="previewCamisa" class="w-full rounded-xl bg-slate-800">
+  </div>
+</div>
 
-    const pessoaInput = document.getElementById("pessoa");
-    const camisaInput = document.getElementById("camisa");
-    const previewPessoa = document.getElementById("previewPessoa");
-    const previewCamisa = document.getElementById("previewCamisa");
-    const resultado = document.getElementById("resultado");
-    const statusBox = document.getElementById("status");
-    const btnGerar = document.getElementById("btnGerar");
-    const btnDownload = document.getElementById("btnDownload");
+<button onclick="gerar()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold text-lg">
+GERAR UNIFORMIZAÇÃO
+</button>
 
-    function status(msg) {
-      statusBox.textContent = msg;
+<div class="bg-slate-900 p-4 rounded-2xl mt-6">
+  <h2 class="font-bold mb-3">Status</h2>
+  <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
+</div>
+
+<div class="bg-slate-900 p-4 rounded-2xl mt-6">
+  <h2 class="font-bold mb-3">Resultado</h2>
+  <img id="resultado" class="w-full rounded-xl bg-slate-800">
+</div>
+
+</div>
+
+<script>
+const WORKER_URL = "https://uniformiza-ai-api.prmoizinho.workers.dev";
+
+const pessoaInput = document.getElementById("pessoa");
+const camisaInput = document.getElementById("camisa");
+const previewPessoa = document.getElementById("previewPessoa");
+const previewCamisa = document.getElementById("previewCamisa");
+const resultado = document.getElementById("resultado");
+const statusBox = document.getElementById("status");
+
+function status(msg) {
+  statusBox.textContent = msg;
+}
+
+function preview(input, img) {
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (!file) return;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+preview(pessoaInput, previewPessoa);
+preview(camisaInput, previewCamisa);
+
+async function gerar() {
+  const pessoa = pessoaInput.files[0];
+  const camisa = camisaInput.files[0];
+
+  if (!pessoa || !camisa) {
+    alert("Envie a foto da pessoa e a foto da camisa.");
+    return;
+  }
+
+  resultado.removeAttribute("src");
+  status("Enviando imagens para o servidor seguro...\nAguarde, pode demorar alguns minutos.");
+
+  const form = new FormData();
+  form.append("pessoa", pessoa);
+  form.append("camisa", camisa);
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: "POST",
+      body: form
+    });
+
+    const contentType = res.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+      ? await res.json()
+      : { error: await res.text() };
+
+    if (!res.ok) {
+      throw new Error(data.erro || data.error || data.detail || "Erro desconhecido.");
     }
 
-    function preview(input, img) {
-      input.addEventListener("change", () => {
-        const file = input.files[0];
-        if (!file) return;
-        img.src = URL.createObjectURL(file);
-      });
+    const imageUrl = data.imageUrl || data.result || data.image || data.url;
+
+    if (!imageUrl) {
+      throw new Error("O servidor respondeu, mas não enviou a URL da imagem.");
     }
 
-    preview(pessoaInput, previewPessoa);
-    preview(camisaInput, previewCamisa);
+    resultado.src = imageUrl;
+    status(
+      "Imagem gerada com sucesso!\n\n" +
+      "Endpoint usado: " + (data.endpoint || "não informado")
+    );
 
-    function setLoading(loading) {
-      btnGerar.disabled = loading;
-      btnGerar.classList.toggle("opacity-60", loading);
-      btnGerar.classList.toggle("cursor-not-allowed", loading);
-      btnGerar.textContent = loading ? "GERANDO..." : "GERAR UNIFORMIZAÇÃO";
-    }
-
-    async function gerar() {
-      const pessoa = pessoaInput.files[0];
-      const camisa = camisaInput.files[0];
-
-      if (!pessoa || !camisa) {
-        alert("Envie a foto da pessoa e a foto da camisa.");
-        return;
-      }
-
-      resultado.removeAttribute("src");
-      btnDownload.classList.add("hidden");
-      setLoading(true);
-
-      status("Enviando imagens para o servidor seguro...\nAguarde, isso pode demorar alguns minutos.");
-
-      const form = new FormData();
-      form.append("pessoa", pessoa);
-      form.append("camisa", camisa);
-
-      try {
-        const res = await fetch(WORKER_URL, {
-          method: "POST",
-          body: form
-        });
-
-        const contentType = res.headers.get("content-type") || "";
-
-        if (!res.ok) {
-          let errorMessage = "Erro desconhecido.";
-          try {
-            if (contentType.includes("application/json")) {
-              const errJson = await res.json();
-              errorMessage = errJson.erro || errJson.error || errJson.detail || JSON.stringify(errJson);
-            } else {
-              errorMessage = await res.text();
-            }
-          } catch {
-            errorMessage = "Falha ao processar resposta de erro.";
-          }
-          throw new Error(errorMessage);
-        }
-
-        // Caso o Worker devolva imagem direta
-        if (contentType.startsWith("image/")) {
-          const blob = await res.blob();
-          const blobUrl = URL.createObjectURL(blob);
-
-          resultado.src = blobUrl;
-          btnDownload.href = blobUrl;
-          btnDownload.classList.remove("hidden");
-
-          status("Imagem gerada com sucesso!");
-          return;
-        }
-
-        // Caso o Worker devolva JSON
-        let data = {};
-        if (contentType.includes("application/json")) {
-          data = await res.json();
-        } else {
-          const text = await res.text();
-          try {
-            data = JSON.parse(text);
-          } catch {
-            throw new Error("O servidor respondeu em formato inesperado.");
-          }
-        }
-
-        const imageUrl = data.imageUrl || data.result || data.image || data.url || data.output;
-
-        if (!imageUrl) {
-          throw new Error("O servidor respondeu, mas não enviou a URL da imagem.");
-        }
-
-        resultado.src = imageUrl;
-        btnDownload.href = imageUrl;
-        btnDownload.classList.remove("hidden");
-
-        status("Imagem gerada com sucesso!");
-
-      } catch (e) {
-        console.error(e);
-        status("Erro ao gerar imagem:\n\n" + e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-  </script>
+  } catch (e) {
+    console.error(e);
+    status("Erro ao gerar imagem:\n\n" + e.message);
+  }
+}
+</script>
 </body>
 </html>
