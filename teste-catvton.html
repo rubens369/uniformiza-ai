@@ -1,199 +1,289 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Uniformiza AI - Teste CatVTON</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uniformiza AI - Teste CatVTON</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-slate-950 text-white min-h-screen p-4">
-<div class="max-w-5xl mx-auto">
+<body class="bg-slate-950 text-white min-h-screen">
+  <main class="max-w-5xl mx-auto p-4 md:p-8">
+    <section class="mb-6">
+      <h1 class="text-3xl md:text-4xl font-black">Uniformiza AI</h1>
+      <p class="text-slate-300 mt-2">
+        Teste de troca de camisa usando CatVTON via Cloudflare Worker.
+      </p>
+      <div class="mt-4 rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-4 text-yellow-100 text-sm">
+        ⚠️ Clique em <strong>Gerar imagem</strong> apenas uma vez e aguarde. O CatVTON pode demorar por causa da fila/limite do Hugging Face.
+      </div>
+    </section>
 
-  <header class="mb-6">
-    <h1 class="text-3xl font-bold">Uniformiza AI</h1>
-    <p class="text-slate-300">Teste via Cloudflare Worker + CatVTON</p>
-    <p class="text-xs text-slate-500 mt-2">
-      Envie a foto da pessoa e a foto da camisa. A geração pode demorar alguns minutos.
-    </p>
-  </header>
+    <section class="grid md:grid-cols-2 gap-6">
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+        <h2 class="text-xl font-bold mb-4">1. Enviar imagens</h2>
 
-  <div class="grid md:grid-cols-2 gap-4">
-    <div class="bg-slate-900 p-4 rounded-2xl">
-      <h2 class="font-bold mb-3">Foto da Pessoa</h2>
-      <input id="pessoa" type="file" accept="image/*" class="mb-3 text-sm">
-      <img id="previewPessoa" class="w-full rounded-xl bg-slate-800">
-    </div>
+        <label class="block mb-4">
+          <span class="block text-sm text-slate-300 mb-2">Foto da pessoa</span>
+          <input id="pessoa" type="file" accept="image/*" class="block w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-white hover:file:bg-blue-700" />
+        </label>
 
-    <div class="bg-slate-900 p-4 rounded-2xl">
-      <h2 class="font-bold mb-3">Foto da Camisa</h2>
-      <input id="camisa" type="file" accept="image/*" class="mb-3 text-sm">
-      <img id="previewCamisa" class="w-full rounded-xl bg-slate-800">
-    </div>
-  </div>
+        <div id="previewPessoaBox" class="hidden mb-5">
+          <p class="text-xs text-slate-400 mb-2">Prévia da pessoa</p>
+          <img id="previewPessoa" class="max-h-80 rounded-xl border border-slate-700 bg-slate-800 object-contain mx-auto" />
+        </div>
 
-  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
-    <h2 class="font-bold mb-3">Configurações</h2>
+        <label class="block mb-4">
+          <span class="block text-sm text-slate-300 mb-2">Imagem da camisa / roupa</span>
+          <input id="camisa" type="file" accept="image/*" class="block w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-white hover:file:bg-blue-700" />
+        </label>
 
-    <div class="grid md:grid-cols-3 gap-4">
-      <div>
-        <label class="block text-sm text-slate-300 mb-1">Qualidade / Steps</label>
-        <input id="steps" type="number" value="30" min="10" max="50"
-          class="w-full rounded-lg p-2 text-black">
-        <p class="text-xs text-slate-500 mt-1">30 está bom. Mais alto demora mais.</p>
+        <div id="previewCamisaBox" class="hidden">
+          <p class="text-xs text-slate-400 mb-2">Prévia da camisa</p>
+          <img id="previewCamisa" class="max-h-80 rounded-xl border border-slate-700 bg-slate-800 object-contain mx-auto" />
+        </div>
       </div>
 
-      <div>
-        <label class="block text-sm text-slate-300 mb-1">Força / Guidance</label>
-        <input id="guidance" type="number" value="5.0" min="2" max="8" step="0.5"
-          class="w-full rounded-lg p-2 text-black">
-        <p class="text-xs text-slate-500 mt-1">5.0 foi o resultado aprovado.</p>
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+        <h2 class="text-xl font-bold mb-4">2. Configurações</h2>
+
+        <label class="block mb-4">
+          <span class="block text-sm text-slate-300 mb-2">Tipo da roupa</span>
+          <select id="clothType" class="w-full rounded-lg bg-slate-800 border border-slate-700 p-3 text-white">
+            <option value="upper" selected>Camisa / Blusa</option>
+            <option value="lower">Calça / Saia / Short</option>
+            <option value="overall">Roupa inteira / Vestido / Macacão</option>
+          </select>
+        </label>
+
+        <label class="block mb-4">
+          <span class="block text-sm text-slate-300 mb-2">Modo de resultado</span>
+          <select id="resultMode" class="w-full rounded-lg bg-slate-800 border border-slate-700 p-3 text-white">
+            <option value="result only" selected>Somente resultado</option>
+            <option value="input & result">Entrada + resultado</option>
+            <option value="input & mask & result">Entrada + máscara + resultado</option>
+          </select>
+        </label>
+
+        <div class="grid grid-cols-3 gap-3">
+          <label class="block">
+            <span class="block text-sm text-slate-300 mb-2">Steps</span>
+            <input id="steps" type="number" value="50" min="1" max="100" class="w-full rounded-lg bg-slate-800 border border-slate-700 p-3 text-white" />
+          </label>
+
+          <label class="block">
+            <span class="block text-sm text-slate-300 mb-2">Guidance</span>
+            <input id="guidance" type="number" value="2.5" step="0.1" min="0" max="30" class="w-full rounded-lg bg-slate-800 border border-slate-700 p-3 text-white" />
+          </label>
+
+          <label class="block">
+            <span class="block text-sm text-slate-300 mb-2">Seed</span>
+            <input id="seed" type="number" value="42" class="w-full rounded-lg bg-slate-800 border border-slate-700 p-3 text-white" />
+          </label>
+        </div>
+
+        <div class="mt-5 rounded-xl bg-slate-800/70 border border-slate-700 p-4 text-sm text-slate-300">
+          <p><strong>Padrão recomendado:</strong></p>
+          <p>Camisa: <strong>Camisa / Blusa</strong></p>
+          <p>Steps: <strong>50</strong></p>
+          <p>Guidance: <strong>2.5</strong></p>
+          <p>Seed: <strong>42</strong></p>
+        </div>
+
+        <button id="btnGerar" class="mt-5 w-full rounded-xl bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed px-5 py-4 font-black text-lg">
+          Gerar imagem
+        </button>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <h2 class="text-xl font-bold mb-3">Status</h2>
+      <div id="status" class="rounded-xl bg-slate-800 border border-slate-700 p-4 text-slate-300 whitespace-pre-wrap">
+        Aguardando envio das imagens.
       </div>
 
-      <div>
-        <label class="block text-sm text-slate-300 mb-1">Seed</label>
-        <input id="seed" type="number" value="42"
-          class="w-full rounded-lg p-2 text-black">
-        <p class="text-xs text-slate-500 mt-1">Muda pequenas variações da imagem.</p>
+      <div id="loadingBox" class="hidden mt-4 rounded-xl border border-blue-400/30 bg-blue-400/10 p-4 text-blue-100">
+        ⏳ Gerando... não clique novamente. Aguarde até alguns minutos.
       </div>
-    </div>
-  </div>
+    </section>
 
-  <button id="btnGerar" onclick="gerar()"
-    class="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl py-4 font-bold text-lg">
-    GERAR UNIFORMIZAÇÃO
-  </button>
+    <section id="resultadoBox" class="hidden mt-6 rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <h2 class="text-xl font-bold mb-4">Resultado</h2>
+      <img id="resultadoImg" class="rounded-xl border border-slate-700 bg-slate-800 max-w-full mx-auto" />
 
-  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
-    <h2 class="font-bold mb-3">Status</h2>
-    <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
-  </div>
+      <div class="mt-4 flex flex-wrap gap-3">
+        <a id="abrirResultado" target="_blank" class="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 font-bold">
+          Abrir imagem
+        </a>
+        <a id="baixarResultado" download="uniformiza-ai-resultado.png" class="rounded-lg bg-purple-600 hover:bg-purple-700 px-4 py-2 font-bold">
+          Baixar imagem
+        </a>
+      </div>
+    </section>
 
-  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="font-bold">Resultado</h2>
-      <a id="baixar" href="#" download="uniformiza-ai-resultado.png"
-        class="hidden bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-bold">
-        Baixar imagem
-      </a>
-    </div>
+    <section id="debugBox" class="hidden mt-6 rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <button id="toggleDebug" class="rounded-lg bg-slate-700 hover:bg-slate-600 px-4 py-2 text-sm font-bold">
+        Mostrar detalhes técnicos
+      </button>
+      <pre id="debugText" class="hidden mt-4 overflow-auto max-h-96 rounded-xl bg-black/50 p-4 text-xs text-slate-300"></pre>
+    </section>
+  </main>
 
-    <img id="resultado" class="w-full rounded-xl bg-slate-800">
-  </div>
+  <script>
+    const WORKER_URL = "https://uniformiza-ai-api.prmoizinho.workers.dev";
 
-</div>
+    const pessoaInput = document.getElementById("pessoa");
+    const camisaInput = document.getElementById("camisa");
+    const btnGerar = document.getElementById("btnGerar");
+    const statusBox = document.getElementById("status");
+    const loadingBox = document.getElementById("loadingBox");
 
-<script>
-const WORKER_URL = "https://uniformiza-ai-api.prmoizinho.workers.dev";
+    const resultadoBox = document.getElementById("resultadoBox");
+    const resultadoImg = document.getElementById("resultadoImg");
+    const abrirResultado = document.getElementById("abrirResultado");
+    const baixarResultado = document.getElementById("baixarResultado");
 
-const pessoaInput = document.getElementById("pessoa");
-const camisaInput = document.getElementById("camisa");
-const previewPessoa = document.getElementById("previewPessoa");
-const previewCamisa = document.getElementById("previewCamisa");
-const resultado = document.getElementById("resultado");
-const statusBox = document.getElementById("status");
-const btnGerar = document.getElementById("btnGerar");
-const baixar = document.getElementById("baixar");
+    const debugBox = document.getElementById("debugBox");
+    const debugText = document.getElementById("debugText");
+    const toggleDebug = document.getElementById("toggleDebug");
 
-const stepsInput = document.getElementById("steps");
-const guidanceInput = document.getElementById("guidance");
-const seedInput = document.getElementById("seed");
+    function mostrarPreview(input, imgId, boxId) {
+      const file = input.files && input.files[0];
+      const img = document.getElementById(imgId);
+      const box = document.getElementById(boxId);
 
-function status(msg) {
-  statusBox.textContent = msg;
-}
+      if (!file) {
+        box.classList.add("hidden");
+        img.removeAttribute("src");
+        return;
+      }
 
-function preview(input, img) {
-  input.addEventListener("change", () => {
-    const file = input.files[0];
-    if (!file) return;
-    img.src = URL.createObjectURL(file);
-  });
-}
+      const url = URL.createObjectURL(file);
+      img.src = url;
+      box.classList.remove("hidden");
+    }
 
-preview(pessoaInput, previewPessoa);
-preview(camisaInput, previewCamisa);
-
-function setCarregando(valor) {
-  btnGerar.disabled = valor;
-  btnGerar.textContent = valor ? "GERANDO... AGUARDE" : "GERAR UNIFORMIZAÇÃO";
-}
-
-async function gerar() {
-  const pessoa = pessoaInput.files[0];
-  const camisa = camisaInput.files[0];
-
-  if (!pessoa || !camisa) {
-    alert("Envie a foto da pessoa e a foto da camisa.");
-    return;
-  }
-
-  resultado.removeAttribute("src");
-  baixar.classList.add("hidden");
-  baixar.removeAttribute("href");
-
-  setCarregando(true);
-
-  status(
-    "Enviando imagens para o servidor seguro...\n" +
-    "Aguarde, pode demorar alguns minutos.\n\n" +
-    "Configuração:\n" +
-    "Steps: " + stepsInput.value + "\n" +
-    "Guidance: " + guidanceInput.value + "\n" +
-    "Seed: " + seedInput.value
-  );
-
-  const form = new FormData();
-  form.append("pessoa", pessoa);
-  form.append("camisa", camisa);
-
-  form.append("steps", stepsInput.value || "30");
-  form.append("guidance", guidanceInput.value || "5.0");
-  form.append("seed", seedInput.value || "42");
-  form.append("clothType", "upper");
-  form.append("resultMode", "result only");
-
-  try {
-    const res = await fetch(WORKER_URL, {
-      method: "POST",
-      body: form
+    pessoaInput.addEventListener("change", () => {
+      mostrarPreview(pessoaInput, "previewPessoa", "previewPessoaBox");
     });
 
-    const contentType = res.headers.get("content-type") || "";
-    const data = contentType.includes("application/json")
-      ? await res.json()
-      : { error: await res.text() };
+    camisaInput.addEventListener("change", () => {
+      mostrarPreview(camisaInput, "previewCamisa", "previewCamisaBox");
+    });
 
-    if (!res.ok) {
-      throw new Error(data.erro || data.error || data.detail || "Erro desconhecido.");
+    function limparMensagemErro(erro) {
+      let mensagem = erro || "Erro desconhecido.";
+
+      if (
+        mensagem.includes("event: error") ||
+        mensagem.includes("data: null") ||
+        mensagem.includes("Nenhuma tentativa funcionou")
+      ) {
+        return "O servidor de IA do CatVTON está ocupado, limitado ou recusou a geração agora. Aguarde liberar o limite e tente novamente mais tarde. Não clique várias vezes seguidas.";
+      }
+
+      if (mensagem.includes("Tempo limite") || mensagem.includes("aborted")) {
+        return "A geração demorou demais e atingiu o tempo limite. Tente novamente mais tarde.";
+      }
+
+      if (mensagem.includes("HF_TOKEN")) {
+        return "O token do Hugging Face não foi encontrado no Worker.";
+      }
+
+      if (mensagem.includes("Upload falhou")) {
+        return "Falha ao enviar as imagens para o CatVTON. Tente imagens menores ou tente mais tarde.";
+      }
+
+      return mensagem;
     }
 
-    const imageUrl = data.imageUrl || data.result || data.image || data.url;
-
-    if (!imageUrl) {
-      throw new Error("O servidor respondeu, mas não enviou a URL da imagem.");
+    function travarBotao() {
+      btnGerar.disabled = true;
+      btnGerar.textContent = "Gerando... aguarde";
+      loadingBox.classList.remove("hidden");
     }
 
-    resultado.src = imageUrl;
-    baixar.href = imageUrl;
-    baixar.classList.remove("hidden");
+    function liberarBotao() {
+      btnGerar.disabled = false;
+      btnGerar.textContent = "Gerar imagem";
+      loadingBox.classList.add("hidden");
+    }
 
-    status(
-      "Imagem gerada com sucesso!\n\n" +
-      "Endpoint usado: " + (data.endpoint || "não informado") + "\n" +
-      "Steps: " + (data.configUsada?.submitSteps || stepsInput.value) + "\n" +
-      "Guidance: " + (data.configUsada?.submitGuidance || guidanceInput.value) + "\n" +
-      "Seed: " + (data.configUsada?.seed || seedInput.value)
-    );
+    async function gerarImagem() {
+      const pessoa = pessoaInput.files && pessoaInput.files[0];
+      const camisa = camisaInput.files && camisaInput.files[0];
 
-  } catch (e) {
-    console.error(e);
-    status("Erro ao gerar imagem:\n\n" + e.message);
-  } finally {
-    setCarregando(false);
-  }
-}
-</script>
+      resultadoBox.classList.add("hidden");
+      debugBox.classList.add("hidden");
+      debugText.classList.add("hidden");
+      debugText.textContent = "";
 
+      if (!pessoa || !camisa) {
+        statusBox.textContent = "Envie a foto da pessoa e a imagem da camisa antes de gerar.";
+        return;
+      }
+
+      const form = new FormData();
+      form.append("pessoa", pessoa);
+      form.append("camisa", camisa);
+      form.append("clothType", document.getElementById("clothType").value || "upper");
+      form.append("resultMode", document.getElementById("resultMode").value || "result only");
+      form.append("steps", document.getElementById("steps").value || "50");
+      form.append("guidance", document.getElementById("guidance").value || "2.5");
+      form.append("seed", document.getElementById("seed").value || "42");
+
+      travarBotao();
+      statusBox.textContent = "Enviando imagens e aguardando o CatVTON gerar. Clique só uma vez e aguarde...";
+
+      try {
+        const response = await fetch(WORKER_URL, {
+          method: "POST",
+          body: form
+        });
+
+        const data = await response.json().catch(() => null);
+
+        debugBox.classList.remove("hidden");
+        debugText.textContent = JSON.stringify(data, null, 2);
+
+        if (!response.ok || !data || !data.ok) {
+          const erroLimpo = limparMensagemErro(data?.erro || "Erro ao gerar imagem.");
+          statusBox.textContent = "Erro: " + erroLimpo;
+          return;
+        }
+
+        const imageUrl = data.imageUrl;
+
+        if (!imageUrl) {
+          statusBox.textContent = "O Worker respondeu, mas não enviou a URL da imagem.";
+          return;
+        }
+
+        resultadoImg.src = imageUrl;
+        abrirResultado.href = imageUrl;
+        baixarResultado.href = imageUrl;
+        resultadoBox.classList.remove("hidden");
+
+        statusBox.textContent =
+          "Imagem gerada com sucesso!\n\n" +
+          "Endpoint usado: " + (data.endpoint || "não informado") + "\n" +
+          "Perfil: " + (data.perfil || "não informado");
+
+      } catch (error) {
+        statusBox.textContent = "Erro: " + limparMensagemErro(error.message);
+      } finally {
+        liberarBotao();
+      }
+    }
+
+    btnGerar.addEventListener("click", gerarImagem);
+
+    toggleDebug.addEventListener("click", () => {
+      debugText.classList.toggle("hidden");
+      toggleDebug.textContent = debugText.classList.contains("hidden")
+        ? "Mostrar detalhes técnicos"
+        : "Ocultar detalhes técnicos";
+    });
+  </script>
 </body>
 </html>
