@@ -10,36 +10,76 @@
 <body class="bg-slate-950 text-white min-h-screen p-4">
 <div class="max-w-5xl mx-auto">
 
-<h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
-<p class="text-slate-300 mb-6">Teste via Cloudflare Worker + CatVTON</p>
+  <header class="mb-6">
+    <h1 class="text-3xl font-bold">Uniformiza AI</h1>
+    <p class="text-slate-300">Teste via Cloudflare Worker + CatVTON</p>
+    <p class="text-xs text-slate-500 mt-2">
+      Envie a foto da pessoa e a foto da camisa. A geração pode demorar alguns minutos.
+    </p>
+  </header>
 
-<div class="grid md:grid-cols-2 gap-4">
-  <div class="bg-slate-900 p-4 rounded-2xl">
-    <h2 class="font-bold mb-3">Foto da Pessoa</h2>
-    <input id="pessoa" type="file" accept="image/*" class="mb-3">
-    <img id="previewPessoa" class="w-full rounded-xl bg-slate-800">
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="bg-slate-900 p-4 rounded-2xl">
+      <h2 class="font-bold mb-3">Foto da Pessoa</h2>
+      <input id="pessoa" type="file" accept="image/*" class="mb-3 text-sm">
+      <img id="previewPessoa" class="w-full rounded-xl bg-slate-800">
+    </div>
+
+    <div class="bg-slate-900 p-4 rounded-2xl">
+      <h2 class="font-bold mb-3">Foto da Camisa</h2>
+      <input id="camisa" type="file" accept="image/*" class="mb-3 text-sm">
+      <img id="previewCamisa" class="w-full rounded-xl bg-slate-800">
+    </div>
   </div>
 
-  <div class="bg-slate-900 p-4 rounded-2xl">
-    <h2 class="font-bold mb-3">Foto da Camisa</h2>
-    <input id="camisa" type="file" accept="image/*" class="mb-3">
-    <img id="previewCamisa" class="w-full rounded-xl bg-slate-800">
+  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
+    <h2 class="font-bold mb-3">Configurações</h2>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm text-slate-300 mb-1">Qualidade / Steps</label>
+        <input id="steps" type="number" value="30" min="10" max="50"
+          class="w-full rounded-lg p-2 text-black">
+        <p class="text-xs text-slate-500 mt-1">30 está bom. Mais alto demora mais.</p>
+      </div>
+
+      <div>
+        <label class="block text-sm text-slate-300 mb-1">Força / Guidance</label>
+        <input id="guidance" type="number" value="5.0" min="2" max="8" step="0.5"
+          class="w-full rounded-lg p-2 text-black">
+        <p class="text-xs text-slate-500 mt-1">5.0 foi o resultado aprovado.</p>
+      </div>
+
+      <div>
+        <label class="block text-sm text-slate-300 mb-1">Seed</label>
+        <input id="seed" type="number" value="42"
+          class="w-full rounded-lg p-2 text-black">
+        <p class="text-xs text-slate-500 mt-1">Muda pequenas variações da imagem.</p>
+      </div>
+    </div>
   </div>
-</div>
 
-<button onclick="gerar()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold text-lg">
-GERAR UNIFORMIZAÇÃO
-</button>
+  <button id="btnGerar" onclick="gerar()"
+    class="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl py-4 font-bold text-lg">
+    GERAR UNIFORMIZAÇÃO
+  </button>
 
-<div class="bg-slate-900 p-4 rounded-2xl mt-6">
-  <h2 class="font-bold mb-3">Status</h2>
-  <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
-</div>
+  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
+    <h2 class="font-bold mb-3">Status</h2>
+    <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
+  </div>
 
-<div class="bg-slate-900 p-4 rounded-2xl mt-6">
-  <h2 class="font-bold mb-3">Resultado</h2>
-  <img id="resultado" class="w-full rounded-xl bg-slate-800">
-</div>
+  <div class="bg-slate-900 p-4 rounded-2xl mt-6">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-bold">Resultado</h2>
+      <a id="baixar" href="#" download="uniformiza-ai-resultado.png"
+        class="hidden bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-bold">
+        Baixar imagem
+      </a>
+    </div>
+
+    <img id="resultado" class="w-full rounded-xl bg-slate-800">
+  </div>
 
 </div>
 
@@ -52,6 +92,12 @@ const previewPessoa = document.getElementById("previewPessoa");
 const previewCamisa = document.getElementById("previewCamisa");
 const resultado = document.getElementById("resultado");
 const statusBox = document.getElementById("status");
+const btnGerar = document.getElementById("btnGerar");
+const baixar = document.getElementById("baixar");
+
+const stepsInput = document.getElementById("steps");
+const guidanceInput = document.getElementById("guidance");
+const seedInput = document.getElementById("seed");
 
 function status(msg) {
   statusBox.textContent = msg;
@@ -68,6 +114,11 @@ function preview(input, img) {
 preview(pessoaInput, previewPessoa);
 preview(camisaInput, previewCamisa);
 
+function setCarregando(valor) {
+  btnGerar.disabled = valor;
+  btnGerar.textContent = valor ? "GERANDO... AGUARDE" : "GERAR UNIFORMIZAÇÃO";
+}
+
 async function gerar() {
   const pessoa = pessoaInput.files[0];
   const camisa = camisaInput.files[0];
@@ -78,11 +129,29 @@ async function gerar() {
   }
 
   resultado.removeAttribute("src");
-  status("Enviando imagens para o servidor seguro...\nAguarde, pode demorar alguns minutos.");
+  baixar.classList.add("hidden");
+  baixar.removeAttribute("href");
+
+  setCarregando(true);
+
+  status(
+    "Enviando imagens para o servidor seguro...\n" +
+    "Aguarde, pode demorar alguns minutos.\n\n" +
+    "Configuração:\n" +
+    "Steps: " + stepsInput.value + "\n" +
+    "Guidance: " + guidanceInput.value + "\n" +
+    "Seed: " + seedInput.value
+  );
 
   const form = new FormData();
   form.append("pessoa", pessoa);
   form.append("camisa", camisa);
+
+  form.append("steps", stepsInput.value || "30");
+  form.append("guidance", guidanceInput.value || "5.0");
+  form.append("seed", seedInput.value || "42");
+  form.append("clothType", "upper");
+  form.append("resultMode", "result only");
 
   try {
     const res = await fetch(WORKER_URL, {
@@ -106,16 +175,25 @@ async function gerar() {
     }
 
     resultado.src = imageUrl;
+    baixar.href = imageUrl;
+    baixar.classList.remove("hidden");
+
     status(
       "Imagem gerada com sucesso!\n\n" +
-      "Endpoint usado: " + (data.endpoint || "não informado")
+      "Endpoint usado: " + (data.endpoint || "não informado") + "\n" +
+      "Steps: " + (data.configUsada?.submitSteps || stepsInput.value) + "\n" +
+      "Guidance: " + (data.configUsada?.submitGuidance || guidanceInput.value) + "\n" +
+      "Seed: " + (data.configUsada?.seed || seedInput.value)
     );
 
   } catch (e) {
     console.error(e);
     status("Erro ao gerar imagem:\n\n" + e.message);
+  } finally {
+    setCarregando(false);
   }
 }
 </script>
+
 </body>
 </html>
