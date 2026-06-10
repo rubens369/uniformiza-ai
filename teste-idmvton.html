@@ -90,7 +90,6 @@
   </div>
 
   <script>
-    // COLE AQUI A URL DO SEU WORKER IDM-VTON
     const WORKER_URL = "https://uniformiza-ai-idmvton.prmoizinho.workers.dev";
 
     const pessoaInput = document.getElementById("pessoa");
@@ -137,7 +136,7 @@
       const form = new FormData();
       form.append("pessoa", pessoa);
       form.append("camisa", camisa);
-      form.append("descricao", descricao || "black t-shirt");
+      form.append("garmentDes", descricao || "black t-shirt");
       form.append("seed", seed || "42");
       form.append("steps", steps || "30");
       form.append("autoCrop", autoCrop ? "true" : "false");
