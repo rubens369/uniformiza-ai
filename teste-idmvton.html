@@ -1,1 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uniformiza AI - IDM-VTON</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen p-4">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold mb-2">Uniformiza AI</h1>
+    <p class="text-slate-300 mb-6">Teste via Cloudflare Worker + IDM-VTON</p>
 
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-slate-900 p-4 rounded-2xl">
+        <h2 class="font-bold mb-3">Foto da Pessoa</h2>
+        <input id="pessoa" type="file" accept="image/*" class="mb-3 block w-full">
+        <img id="previewPessoa" class="w-full rounded-xl bg-slate-800 min-h-[250px] object-contain" />
+      </div>
+
+      <div class="bg-slate-900 p-4 rounded-2xl">
+        <h2 class="font-bold mb-3">Foto da Roupa</h2>
+        <input id="camisa" type="file" accept="image/*" class="mb-3 block w-full">
+        <img id="previewCamisa" class="w-full rounded-xl bg-slate-800 min-h-[250px] object-contain" />
+      </div>
+    </div>
+
+    <div class="bg-slate-900 p-4 rounded-2xl mt-4">
+      <h2 class="font-bold mb-3">Configurações</h2>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-slate-300 mb-1">Descrição da Roupa</label>
+          <input
+            id="descricao"
+            type="text"
+            value="black t-shirt"
+            class="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white"
+          >
+        </div>
+
+        <div>
+          <label class="block text-sm text-slate-300 mb-1">Seed</label>
+          <input
+            id="seed"
+            type="number"
+            value="42"
+            class="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white"
+          >
+        </div>
+
+        <div>
+          <label class="block text-sm text-slate-300 mb-1">Passos</label>
+          <input
+            id="steps"
+            type="number"
+            value="30"
+            min="10"
+            max="50"
+            class="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white"
+          >
+        </div>
+
+        <div class="flex items-end">
+          <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+            <input id="autoCrop" type="checkbox" checked class="rounded">
+            Cortar/alinha corpo automaticamente
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="gerar()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-bold text-lg">
+      GERAR UNIFORMIZAÇÃO
+    </button>
+
+    <div class="bg-slate-900 p-4 rounded-2xl mt-6">
+      <h2 class="font-bold mb-3">Status</h2>
+      <pre id="status" class="text-sm whitespace-pre-wrap text-yellow-300">Aguardando imagens...</pre>
+    </div>
+
+    <div class="bg-slate-900 p-4 rounded-2xl mt-6">
+      <h2 class="font-bold mb-3">Resultado</h2>
+      <img id="resultado" class="w-full rounded-xl bg-slate-800 min-h-[300px] object-contain" />
+      <a id="btnDownload" href="#" download="uniformiza-resultado.png"
+         class="hidden mt-4 inline-block bg-emerald-600 hover:bg-emerald-700 px-5 py-3 rounded-xl font-bold">
+         Baixar imagem
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // COLE AQUI A URL DO SEU WORKER IDM-VTON
+    const WORKER_URL = "COLE_AQUI_A_URL_DO_SEU_WORKER";
+
+    const pessoaInput = document.getElementById("pessoa");
+    const camisaInput = document.getElementById("camisa");
+    const previewPessoa = document.getElementById("previewPessoa");
+    const previewCamisa = document.getElementById("previewCamisa");
+    const resultado = document.getElementById("resultado");
+    const statusBox = document.getElementById("status");
+    const btnDownload = document.getElementById("btnDownload");
+
+    function status(msg) {
+      statusBox.textContent = msg;
+    }
+
+    function preview(input, img) {
+      input.addEventListener("change", () => {
+        const file = input.files[0];
+        if (!file) return;
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    preview(pessoaInput, previewPessoa);
+    preview(camisaInput, previewCamisa);
+
+    async function gerar() {
+      const pessoa = pessoaInput.files[0];
+      const camisa = camisaInput.files[0];
+      const descricao = document.getElementById("descricao").value.trim();
+      const seed = document.getElementById("seed").value.trim();
+      const steps = document.getElementById("steps").value.trim();
+      const autoCrop = document.getElementById("autoCrop").checked;
+
+      if (!pessoa || !camisa) {
+        alert("Envie a foto da pessoa e a foto da roupa.");
+        return;
+      }
+
+      resultado.removeAttribute("src");
+      btnDownload.classList.add("hidden");
+
+      status("Enviando imagens para o servidor seguro...\nAguarde, pode demorar alguns minutos.");
+
+      const form = new FormData();
+      form.append("pessoa", pessoa);
+      form.append("camisa", camisa);
+      form.append("descricao", descricao || "black t-shirt");
+      form.append("seed", seed || "42");
+      form.append("steps", steps || "30");
+      form.append("autoCrop", autoCrop ? "true" : "false");
+
+      try {
+        const res = await fetch(WORKER_URL, {
+          method: "POST",
+          body: form
+        });
+
+        const contentType = res.headers.get("content-type") || "";
+        const data = contentType.includes("application/json")
+          ? await res.json()
+          : { erro: await res.text() };
+
+        if (!res.ok) {
+          throw new Error(data.erro || data.error || "Erro desconhecido.");
+        }
+
+        const imageUrl =
+          data.imageUrl ||
+          data.result ||
+          data.output ||
+          data.image ||
+          data.url ||
+          (Array.isArray(data.data) ? data.data[0] : null);
+
+        if (!imageUrl) {
+          throw new Error("O servidor respondeu, mas não retornou uma imagem válida.");
+        }
+
+        resultado.src = imageUrl;
+        btnDownload.href = imageUrl;
+        btnDownload.classList.remove("hidden");
+
+        status("Imagem gerada com sucesso!");
+      } catch (e) {
+        console.error(e);
+        status("Erro ao gerar imagem:\n\n" + e.message);
+      }
+    }
+  </script>
+</body>
+</html>
